@@ -4,7 +4,7 @@
 
 # Process Monitor in Rust
 
-![img](https://github.com/s00d/monit-tool/blob/main/assets/main.gif?raw=true)
+![img](https://github.com/s00d/monit-tool/blob/main/assets/main1.gif?raw=true)
 
 This Rust application provides a simple interface to monitor CPU and memory usage of processes running on your system. It allows users to filter and select a process from the list and displays real-time CPU and memory usage using colored graphs.
 

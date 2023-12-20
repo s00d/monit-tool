@@ -60,8 +60,8 @@ fn main() -> Result<(), io::Error> {
     match selection_index {
         Some(index) => {
             let selected_process = &processes[index];
-            println!("Process selected: PID {} - {}", selected_process.pid, selected_process.name);
-            let pid = Pid::from_u32(selected_process.pid);
+            let mut pid = Pid::from_u32(selected_process.pid);
+            let selected_cmdline = selected_process.name.clone();
 
             let mut cpu_data: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN]; // Вектор для хранения данных CPU
             let mut memory_data: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN]; // Вектор для хранения данных памяти
@@ -70,10 +70,11 @@ fn main() -> Result<(), io::Error> {
             let mut max: f32 = 0.;
 
             loop {
-                system.refresh_process(pid);
+                system.refresh_all();
                 if let Some(proc) = system.process(pid) {
                     let cpu_usage = proc.cpu_usage() as f32;
                     let memory_usage = proc.memory() as f32 / 1024.0 / 1024.0; // Convert to MB
+                    // let disk_write = proc.disk_usage().written_bytes as f32; // Convert to MB
                     let name = proc.cmd().join(" ").to_string(); // Convert to MB
 
                     if memory_usage > max {
@@ -108,7 +109,23 @@ fn main() -> Result<(), io::Error> {
                         .display();
 
                     tick += 1;
+                } else {
+                    let term = console::Term::stdout();
+                    term.show_cursor().unwrap();
+                    let new_pid = system.processes().iter()
+                        .find(|(_, p)| format!("{} - {}", p.name(), p.cmd().join(" ").to_string()) == selected_cmdline)
+                        .map(|(&pid, _)| pid.as_u32());
+
+
+                    term.move_cursor_to(0, 0).unwrap();
+                    println!("Waiting process... {:?}", selected_cmdline);
+
+                    if let Some(new_pid_value) = new_pid {
+                        println!("Process restarted with PID: {}", new_pid_value);
+                        pid = Pid::from_u32(new_pid_value); // Обновляем PID
+                    }
                 }
+
 
                 thread::sleep(Duration::from_millis(50));
             }

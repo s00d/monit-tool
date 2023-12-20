@@ -3,7 +3,7 @@ use std::io::{self};
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
-use dialoguer::{Input, Select};
+use dialoguer::{FuzzySelect};
 use dialoguer::theme::ColorfulTheme;
 use rgb::RGB8;
 use textplots::{Chart, ColorPlot, Shape};
@@ -44,39 +44,24 @@ fn main() -> Result<(), io::Error> {
         })
         .collect();
 
-    let filter: String = Input::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter a filter for the process name")
-        .default("".into())
-        .interact_text()
-        .unwrap();
-
-// Применение фильтра
-    let filtered_processes: Vec<&ProcessItem> = processes.iter()
-        .filter(|proc| proc.name.to_lowercase().contains(&filter.to_lowercase()))
-        .collect();
-
-    if filtered_processes.is_empty() {
-        println!("There are no processes matching the filter.");
-        return Ok(());
-    }
-
 // Подготовка списка строк для интерфейса выбора
-    let selection_items: Vec<String> = filtered_processes
+    let selection_items: Vec<String> = processes
         .iter()
         .map(|proc| format!("PID {}: {}", proc.pid, proc.name))
         .collect();
 
 // Выбор процесса из отфильтрованного списка
-    let selection_index = Select::with_theme(&ColorfulTheme::default())
+    let selection_index = FuzzySelect::with_theme(&ColorfulTheme::default())
         .with_prompt("Select process")
         .default(0)
+        .max_length(6)
         .items(&selection_items)
         .interact_opt()
         .unwrap();
 
     match selection_index {
         Some(index) => {
-            let selected_process = &filtered_processes[index];
+            let selected_process = &processes[index];
             println!("Process selected: PID {} - {}", selected_process.pid, selected_process.name);
             let pid = Pid::from_u32(selected_process.pid);
 
@@ -98,7 +83,7 @@ fn main() -> Result<(), io::Error> {
                     }
 
                     clear_screen();
-                    println!("\nred = CPU (Usage: {:.2} %), green = Memory (Usage: {:.2} MB)\n", cpu_usage, memory_usage);
+                    println!("\nred = CPU (Usage: {:.2} %), green = Memory (Usage: {:.2} MB) - {}\n", cpu_usage, memory_usage, proc.name());
                     let mut chart = Chart::new(280, 40, -1.0, 100.0);
                     chart.linecolorplot(
                         &Shape::Lines(&cpu_data),

@@ -83,7 +83,7 @@ fn main() -> Result<(), io::Error> {
                     }
 
                     clear_screen();
-                    println!("\nred = CPU (Usage: {:.2} %), green = Memory (Usage: {:.2} MB) - {}\n", cpu_usage, memory_usage, proc.name());
+                    println!("\nred = CPU (Usage: {:.2} %), green = Memory (Usage: {:.2} MB) - {}\n", cpu_usage, memory_usage, proc.cmd().join(" ").to_string());
                     let mut chart = Chart::new(280, 40, -1.0, 100.0);
                     chart.linecolorplot(
                         &Shape::Lines(&cpu_data),

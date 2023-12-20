@@ -65,11 +65,13 @@ cargo install monit-tool
 
 1. Run the program:
    ```
-   monit-tool
+   monit-tool [parameter]
    ```
 2. Enter a filter to search for a specific process or leave it blank to list all processes.
 3. Select a process from the list to monitor.
 4. The program will display real-time CPU and memory usage on a graphical chart.
+
+Where [parameter] is an optional argument you can pass when starting the application. If no parameter is specified, the application will display information about all processes. If a parameter is provided, the application will only display information about processes whose names contain the specified parameter.
 
 ## Customization
 

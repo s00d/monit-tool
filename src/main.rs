@@ -1,7 +1,7 @@
 use sysinfo::{Pid, PidExt, ProcessExt, System, SystemExt};
 use std::io::{self};
 use std::process::Command;
-use std::thread;
+use std::{env, thread};
 use std::time::Duration;
 use dialoguer::{FuzzySelect};
 use dialoguer::theme::ColorfulTheme;
@@ -29,6 +29,12 @@ fn clear_screen() {
 }
 
 fn main() -> Result<(), io::Error> {
+    let args: Vec<String> = env::args().collect();
+
+    // Используем unwrap_or для установки значения по умолчанию (пустая строка)
+    let binding = String::from("");
+    let filter = args.get(1).unwrap_or(&binding);
+
     let mut system = System::new_all();
 
     let processes: Vec<ProcessItem> = system.processes()
@@ -42,6 +48,7 @@ fn main() -> Result<(), io::Error> {
                 name: format!("{} - {}", name, cmdline), // Объединяем имя и параметры командной строки
             }
         })
+        .filter(|proc| proc.name.to_lowercase().contains(&filter.to_lowercase()))
         .collect();
 
 // Подготовка списка строк для интерфейса выбора

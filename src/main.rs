@@ -1,31 +1,18 @@
 use sysinfo::{Pid, PidExt, ProcessExt, System, SystemExt};
 use std::io::{self};
-use std::process::Command;
 use std::{env, thread};
 use std::time::Duration;
 use dialoguer::{FuzzySelect};
 use dialoguer::theme::ColorfulTheme;
-use rgb::RGB8;
-use textplots::{Chart, ColorPlot, Shape};
+use textplots::{Chart, ColorPlot, LabelBuilder, LabelFormat, Shape};
+
+const PRINT_LEN: usize = 500;
+const RED: rgb::RGB8 = rgb::RGB8::new(0xFF, 0x00, 0x00);
+const GREEN: rgb::RGB8 = rgb::RGB8::new(0x00, 0xFF, 0x00);
 
 struct ProcessItem {
     pid: u32,
     name: String,
-}
-
-fn clear_screen() {
-    if cfg!(windows) {
-        // On Windows, use "cls" to clear the screen
-        Command::new("cmd")
-            .args(&["/c", "cls"])
-            .status()
-            .expect("Failed to clear screen");
-    } else {
-        // On Unix-like systems, use "clear" to clear the screen
-        Command::new("clear")
-            .status()
-            .expect("Failed to clear screen");
-    }
 }
 
 fn main() -> Result<(), io::Error> {
@@ -51,13 +38,13 @@ fn main() -> Result<(), io::Error> {
         .filter(|proc| proc.name.to_lowercase().contains(&filter.to_lowercase()))
         .collect();
 
-// Подготовка списка строк для интерфейса выбора
+    // Подготовка списка строк для интерфейса выбора
     let selection_items: Vec<String> = processes
         .iter()
         .map(|proc| format!("PID {}: {}", proc.pid, proc.name))
         .collect();
 
-// Выбор процесса из отфильтрованного списка
+    // Выбор процесса из отфильтрованного списка
     let selection_index = FuzzySelect::with_theme(&ColorfulTheme::default())
         .with_prompt("Select process")
         .default(0)
@@ -66,42 +53,64 @@ fn main() -> Result<(), io::Error> {
         .interact_opt()
         .unwrap();
 
+    let term = console::Term::stdout();
+    term.hide_cursor().unwrap();
+    term.clear_screen().unwrap();
+
     match selection_index {
         Some(index) => {
             let selected_process = &processes[index];
             println!("Process selected: PID {} - {}", selected_process.pid, selected_process.name);
             let pid = Pid::from_u32(selected_process.pid);
 
-            let mut cpu_data = vec![]; // Вектор для хранения данных CPU
-            let mut memory_data = vec![]; // Вектор для хранения данных памяти
+            let mut cpu_data: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN]; // Вектор для хранения данных CPU
+            let mut memory_data: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN]; // Вектор для хранения данных памяти
+            let mut tick = 0; // Вектор для хранения данных памяти
+
+            let mut max: f32 = 0.;
 
             loop {
                 system.refresh_process(pid);
                 if let Some(proc) = system.process(pid) {
                     let cpu_usage = proc.cpu_usage() as f32;
                     let memory_usage = proc.memory() as f32 / 1024.0 / 1024.0; // Convert to MB
+                    let name = proc.cmd().join(" ").to_string(); // Convert to MB
 
-                    cpu_data.push((cpu_data.len() as f32, cpu_usage)); // Добавляем данные CPU как кортежи
-                    memory_data.push((memory_data.len() as f32, memory_usage)); // Добавляем данные памяти как кортежи
-
-                    if cpu_data.len() >= 100 {
-                        cpu_data.clear();
-                        memory_data.clear();
+                    if memory_usage > max {
+                        max = memory_usage
+                    }
+                    cpu_data.copy_within(1..PRINT_LEN, 0);
+                    memory_data.copy_within(1..PRINT_LEN, 0);
+                    cpu_data[PRINT_LEN - 1] = (0., cpu_usage as f32);
+                    memory_data[PRINT_LEN - 1] = (0., memory_usage as f32);
+                    for index in 0..PRINT_LEN {
+                        cpu_data[index].0 += 1.;
+                        memory_data[index].0 += 1.;
                     }
 
-                    clear_screen();
-                    println!("\nred = CPU (Usage: {:.2} %), green = Memory (Usage: {:.2} MB) - {}\n", cpu_usage, memory_usage, proc.cmd().join(" ").to_string());
-                    let mut chart = Chart::new(280, 40, -1.0, 100.0);
-                    chart.linecolorplot(
-                        &Shape::Lines(&cpu_data),
-                        RGB8::new(255, 0, 0),
-                    ).linecolorplot(
-                        &Shape::Lines(&memory_data),
-                        RGB8::new(0, 255, 0),
-                    ).display();
+                    term.move_cursor_to(0, 0).unwrap();
+                    Chart::new_with_y_range(280, 40, -1.5, PRINT_LEN as f32, 0., max)
+                        .linecolorplot(&Shape::Lines(&memory_data), GREEN)
+                        .linecolorplot(&Shape::Lines(&cpu_data), RED)
+                        // .y_label_format(LabelFormat::Value)
+                        .x_label_format(LabelFormat::Custom(Box::new(move |val| {
+                            if val > 0. {
+                                return format!("")
+                            }
+                            format!("{} red = CPU (Usage: {:.2} %), green = Memory (Usage: {:.2} MB) - {}", tick, cpu_usage, memory_usage, name)
+                        })))
+                        .y_label_format(LabelFormat::Custom(Box::new(move |val| {
+                            if val == 0. {
+                                return format!("{:.2}%", cpu_usage)
+                            }
+                            format!("{:.2} MB", val)
+                        })))
+                        .display();
+
+                    tick += 1;
                 }
 
-                thread::sleep(Duration::from_secs(1));
+                thread::sleep(Duration::from_millis(50));
             }
         }
         None => println!("The selection has been cancelled."),

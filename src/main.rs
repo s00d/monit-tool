@@ -9,6 +9,7 @@ use textplots::{Chart, ColorPlot, LabelBuilder, LabelFormat, Shape};
 const PRINT_LEN: usize = 500;
 const RED: rgb::RGB8 = rgb::RGB8::new(0xFF, 0x00, 0x00);
 const GREEN: rgb::RGB8 = rgb::RGB8::new(0x00, 0xFF, 0x00);
+const PURPLE: rgb::RGB8 = rgb::RGB8::new(0xE0, 0x80, 0xFF);
 
 struct ProcessItem {
     pid: u32,
@@ -65,6 +66,7 @@ fn main() -> Result<(), io::Error> {
 
             let mut cpu_data: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN]; // Вектор для хранения данных CPU
             let mut memory_data: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN]; // Вектор для хранения данных памяти
+            let mut disk_usage_data: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
             let mut tick = 0; // Вектор для хранения данных памяти
 
             let mut max: f32 = 0.;
@@ -74,7 +76,11 @@ fn main() -> Result<(), io::Error> {
                 if let Some(proc) = system.process(pid) {
                     let cpu_usage = proc.cpu_usage() as f32;
                     let memory_usage = proc.memory() as f32 / 1024.0 / 1024.0; // Convert to MB
-                    // let disk_write = proc.disk_usage().written_bytes as f32; // Convert to MB
+
+                    let disk_usage = proc.disk_usage();
+                    let total_written_bytes = disk_usage.total_written_bytes as f32 / 1024.0 / 1024.0; // Convert to MB
+                    // let total_read_bytes = disk_usage.total_read_bytes as f32 / 1024.0 / 1024.0; // Convert to MB
+
                     let name = proc.cmd().join(" ").to_string(); // Convert to MB
 
                     if memory_usage > max {
@@ -82,29 +88,33 @@ fn main() -> Result<(), io::Error> {
                     }
                     cpu_data.copy_within(1..PRINT_LEN, 0);
                     memory_data.copy_within(1..PRINT_LEN, 0);
+                    disk_usage_data.copy_within(1..PRINT_LEN, 0);
                     cpu_data[PRINT_LEN - 1] = (0., cpu_usage as f32);
                     memory_data[PRINT_LEN - 1] = (0., memory_usage as f32);
+                    disk_usage_data[PRINT_LEN - 1] = (0., total_written_bytes);
                     for index in 0..PRINT_LEN {
                         cpu_data[index].0 += 1.;
                         memory_data[index].0 += 1.;
+                        disk_usage_data[index].0 += 1.;
                     }
 
                     term.move_cursor_to(0, 0).unwrap();
                     Chart::new_with_y_range(280, 40, -1.5, PRINT_LEN as f32, 0., max)
                         .linecolorplot(&Shape::Lines(&memory_data), GREEN)
                         .linecolorplot(&Shape::Lines(&cpu_data), RED)
+                        .linecolorplot(&Shape::Lines(&disk_usage_data), PURPLE)
                         // .y_label_format(LabelFormat::Value)
                         .x_label_format(LabelFormat::Custom(Box::new(move |val| {
                             if val > 0. {
                                 return format!("")
                             }
-                            format!("{} red = CPU (Usage: {:.2} %), green = Memory (Usage: {:.2} MB) - {}", tick, cpu_usage, memory_usage, name)
+                            format!("{} red = CPU (Usage: {:.2} %), green = Memory (Usage: {:.2} MB), purple - disk write (Usage: {:.2} MB) - {}", tick, cpu_usage, memory_usage, total_written_bytes, name)
                         })))
                         .y_label_format(LabelFormat::Custom(Box::new(move |val| {
                             if val == 0. {
-                                return format!("{:.2}%", cpu_usage)
+                                return format!("{:.2}% {:.2} MB", cpu_usage, total_written_bytes)
                             }
-                            format!("{:.2} MB", val)
+                            format!("{:.2} MB", memory_usage)
                         })))
                         .display();
 

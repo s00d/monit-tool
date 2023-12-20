@@ -45,7 +45,7 @@ fn main() -> Result<(), io::Error> {
         .collect();
 
     let filter: String = Input::with_theme(&ColorfulTheme::default())
-        .with_prompt("Введите фильтр для названия процесса")
+        .with_prompt("Enter a filter for the process name")
         .default("".into())
         .interact_text()
         .unwrap();
@@ -56,7 +56,7 @@ fn main() -> Result<(), io::Error> {
         .collect();
 
     if filtered_processes.is_empty() {
-        println!("Нет процессов, соответствующих фильтру.");
+        println!("There are no processes matching the filter.");
         return Ok(());
     }
 
@@ -68,7 +68,7 @@ fn main() -> Result<(), io::Error> {
 
 // Выбор процесса из отфильтрованного списка
     let selection_index = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("Выберите процесс")
+        .with_prompt("Select process")
         .default(0)
         .items(&selection_items)
         .interact_opt()
@@ -77,7 +77,7 @@ fn main() -> Result<(), io::Error> {
     match selection_index {
         Some(index) => {
             let selected_process = &filtered_processes[index];
-            println!("Выбран процесс: PID {} - {}", selected_process.pid, selected_process.name);
+            println!("Process selected: PID {} - {}", selected_process.pid, selected_process.name);
             let pid = Pid::from_u32(selected_process.pid);
 
             let mut cpu_data = vec![]; // Вектор для хранения данных CPU
@@ -112,7 +112,7 @@ fn main() -> Result<(), io::Error> {
                 thread::sleep(Duration::from_secs(1));
             }
         }
-        None => println!("Выбор отменен."),
+        None => println!("The selection has been cancelled."),
     }
     Ok(())
 }

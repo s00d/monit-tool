@@ -1,6 +1,6 @@
 [package]
 name = "monit-tool"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["s00d <Virus191288@gmail.com>"]
 description = "command-line utility written in Rust for working with GitHub Actions"

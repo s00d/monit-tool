@@ -1,6 +1,6 @@
 [package]
 name = "monit-tool"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 authors = ["s00d <Virus191288@gmail.com>"]
 description = "command-line utility written in Rust for working with GitHub Actions"
@@ -18,6 +18,6 @@ dialoguer = { version = "0.11.0", features = ["fuzzy-matcher", "fuzzy-select"] }
 plotters = "0.3.5"
 rgb = "0.8.37"
 sysinfo = "0.29.11"
-textplots = { version = "0.8.4", features = ["tool", "structopt"] }
+textplots = "0.8.4"
 rand = "0.8.5"
 console = "0.15.7"

@@ -65,13 +65,28 @@ cargo install monit-tool
 
 1. Run the program:
    ```
-   monit-tool [parameter]
+   monit-tool
    ```
 2. Enter a filter to search for a specific process or leave it blank to list all processes.
 3. Select a process from the list to monitor.
 4. The program will display real-time CPU and memory usage on a graphical chart.
 
-Where [parameter] is an optional argument you can pass when starting the application. If no parameter is specified, the application will display information about all processes. If a parameter is provided, the application will only display information about processes whose names contain the specified parameter.
+## Command-Line Parameters
+
+The `monit-tool` application accepts the following command-line parameters:
+
+1. `--name` or `-n`: (Optional) Filter processes by their name. If you provide a name, the application will display only those processes whose names contain the specified string. For example, `monit-tool --name firefox` will display processes related to Firefox. If you do not specify this parameter, the application will list all running processes.
+2. `--watch` or `-w`: (Optional) Enables continuous monitoring of the selected process. If the selected process terminates and then restarts, the application will automatically continue monitoring the new instance of this process. This is particularly useful for tracking processes that may restart during observation.
+3. `--version`: Displays the version information of the `monit-tool` application.
+4. `--help`: Provides help information, displaying the available command-line options and their usage.
+
+Example usage with parameters:
+
+```shell
+monit-tool --name nginx --watch
+```
+
+This command filters the process list for 'nginx' and enables continuous monitoring, even if the 'nginx' process restarts.
 
 ## Customization
 

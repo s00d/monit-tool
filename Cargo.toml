@@ -16,7 +16,9 @@ path = "src/main.rs"
 crossterm = "0.27.0"
 dialoguer = { version = "0.11.0", features = ["fuzzy-matcher", "fuzzy-select"] }
 rgb = "0.8.37"
-sysinfo = "0.29.11"
+sysinfo = "0.30.0"
 textplots = "0.8.4"
 rand = "0.8.5"
 console = "0.15.7"
+clap = { version = "4.4.11", features = ["derive"] }
+chrono = "0.4.31"

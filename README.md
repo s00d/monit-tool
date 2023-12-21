@@ -79,6 +79,9 @@ The `monit-tool` application accepts the following command-line parameters:
 2. `--watch` or `-w`: (Optional) Enables continuous monitoring of the selected process. If the selected process terminates and then restarts, the application will automatically continue monitoring the new instance of this process. This is particularly useful for tracking processes that may restart during observation.
 3. `--version`: Displays the version information of the `monit-tool` application.
 4. `--help`: Provides help information, displaying the available command-line options and their usage.
+5. `--logging` or `-l`: (Optional) Enables logging of monitoring data to a log file. If this option is enabled, the application will create a log file with a timestamped name to record the monitoring data. The log file will include CPU usage, memory usage, and, if enabled, disk write and disk read information for the selected process.
+6. `--disk-write`: (Optional) Enables monitoring and display of disk write activity for the selected process. If this option is enabled, the application will include information about disk write usage in the monitoring chart.
+7. `--disk-read`: (Optional) Enables monitoring and display of disk read activity for the selected process. If this option is enabled, the application will include information about disk read usage in the monitoring chart.
 
 Example usage with parameters:
 

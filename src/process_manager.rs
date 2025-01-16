@@ -19,7 +19,7 @@ impl ProcessManager {
             .iter()
             .map(|(&pid, proc)| ProcessItem {
                 pid: pid.as_u32(),
-                name: format!("{} - {}", proc.name(), proc.cmd().join(" ")),
+                name: format!("{} - {}", proc.name().to_string_lossy(), proc.cmd().iter().map(|s| s.to_string_lossy()).collect::<Vec<_>>().join(" ")),
             })
             .filter(|proc| proc.name.to_lowercase().contains(&filter.to_lowercase()))
             .collect()

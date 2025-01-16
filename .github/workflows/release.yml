@@ -46,29 +46,7 @@ jobs:
             cp target/${{ matrix.target }}/release/monit-tool release/monit-tool-${{ matrix.target }}
           fi
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: binaries-${{ matrix.target }}
-          path: release/
-
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release/
-          pattern: binaries-*
-          merge-multiple: true
-
-      - name: Create Release
-        id: create_release
+      - name: Create Release and Upload Asset
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -77,12 +55,24 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+          body: "Automated release for ${{ github.ref }}"
+        id: create_release
 
-      - name: Upload Release Assets
+      - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release/
-          asset_name: monit-tool-${{ matrix.target }}
+          asset_path: |
+            release/monit-tool-${{ matrix.target }}$(
+              if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+                echo ".exe"
+              fi
+            )
+          asset_name: |
+            monit-tool-${{ matrix.target }}$(
+              if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+                echo ".exe"
+              fi
+            )

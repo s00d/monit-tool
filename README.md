@@ -76,20 +76,33 @@ cargo install monit-tool
 The `monit-tool` application accepts the following command-line parameters:
 
 1. `--name` or `-n`: (Optional) Filter processes by their name. If you provide a name, the application will display only those processes whose names contain the specified string. For example, `monit-tool --name firefox` will display processes related to Firefox. If you do not specify this parameter, the application will list all running processes.
-2. `--watch` or `-w`: (Optional) Enables continuous monitoring of the selected process. If the selected process terminates and then restarts, the application will automatically continue monitoring the new instance of this process. This is particularly useful for tracking processes that may restart during observation.
-3. `--version`: Displays the version information of the `monit-tool` application.
-4. `--help`: Provides help information, displaying the available command-line options and their usage.
+2. `--command` or `-c`: (Optional) Execute and monitor a specific command. If provided, the application will start the specified command and monitor its CPU and memory usage. For example, `monit-tool --command "python3 script.py"` will start and monitor the Python script.
+3. `--workdir`: (Optional) Set the working directory for the command specified with `--command`. Defaults to the current directory (`.`). For example, `monit-tool --command "python3 script.py" --workdir "/path/to/script"` will run the script in the specified directory.
+4. `--watch` or `-w`: (Optional) Enables continuous monitoring of the selected process. If the selected process terminates and then restarts, the application will automatically continue monitoring the new instance of this process. This is particularly useful for tracking processes that may restart during observation.
 5. `--logging` or `-l`: (Optional) Enables logging of monitoring data to a log file. If this option is enabled, the application will create a log file with a timestamped name to record the monitoring data. The log file will include CPU usage, memory usage, and, if enabled, disk write and disk read information for the selected process.
 6. `--disk-write`: (Optional) Enables monitoring and display of disk write activity for the selected process. If this option is enabled, the application will include information about disk write usage in the monitoring chart.
 7. `--disk-read`: (Optional) Enables monitoring and display of disk read activity for the selected process. If this option is enabled, the application will include information about disk read usage in the monitoring chart.
+8. `--nochart`: (Optional) Disables the chart output. If this option is enabled, the application will only log the data (if logging is enabled) without displaying the graphical chart.
+9. `--sleep`: (Optional) Sets the refresh interval (in milliseconds) for updating the monitoring data. Defaults to 50 milliseconds. For example, `monit-tool --sleep 100` will refresh the data every 100 milliseconds.
 
-Example usage with parameters:
+---
+
+### Example Usage with Parameters
 
 ```shell
-monit-tool --name nginx --watch
+monit-tool --name nginx --watch --logging --disk-write --disk-read
 ```
 
-This command filters the process list for 'nginx' and enables continuous monitoring, even if the 'nginx' process restarts.
+This command filters the process list for 'nginx', enables continuous monitoring, logs the data to a file, and includes disk write and read activity in the monitoring chart.
+
+---
+
+### Additional Notes
+
+- If both `--name` and `--command` are provided, the application will prioritize the `--command` and start the specified process for monitoring.
+- The `--watch` parameter is particularly useful when monitoring services or processes that may restart frequently.
+- The `--logging` parameter is useful for long-term monitoring and analysis of process behavior.
+- The `--disk-write` and `--disk-read` parameters provide additional insights into the I/O activity of the monitored process.
 
 ## Customization
 

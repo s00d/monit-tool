@@ -1,6 +1,6 @@
 [package]
 name = "monit-tool"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 authors = ["s00d <Virus191288@gmail.com>"]
 description = "command-line utility written in Rust for working with GitHub Actions"
@@ -23,3 +23,10 @@ console = "0.15.10"
 clap = { version = "4.5.26", features = ["derive"] }
 chrono = "0.4.39"
 ctrlc = "3.4.5"
+
+[profile.release]
+opt-level = "z" # Оптимизация для размера
+lto = true # Включение Link Time Optimization
+codegen-units = 1 # Уменьшение количества единиц компиляции для лучшей оптимизации
+panic = "abort" # Уменьшение объема кода для обработки паник
+strip = true # Удаление символов отладки

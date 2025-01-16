@@ -1,6 +1,6 @@
-use textplots::{Chart, ColorPlot, LabelBuilder, LabelFormat, Shape};
-use rgb::RGB8;
 use crate::{BLUE, ORANGE, PRINT_LEN, PURPLE};
+use rgb::RGB8;
+use textplots::{Chart, ColorPlot, LabelBuilder, LabelFormat, Shape};
 
 pub struct ChartManager {
     // Data for CPU, memory, disk write, and disk read
@@ -104,7 +104,8 @@ impl ChartManager {
     // Function to draw the chart based on the configured data
     pub fn draw_chart(&self) {
         // Create a new chart with specified settings
-        let mut chart = Chart::new_with_y_range(280, 40, -1.5, self.cpu_data.len() as f32, 0., self.max);
+        let mut chart =
+            Chart::new_with_y_range(280, 40, -1.5, self.cpu_data.len() as f32, 0., self.max);
         chart.axis();
         chart.figures();
 
@@ -138,7 +139,7 @@ impl ChartManager {
         let memory_usage = self.memory_usage.clone();
         dots = dots.y_label_format(LabelFormat::Custom(Box::new(move |val| {
             if val == 0. {
-                return format!("{:.2}% MB", cpu_usage)
+                return format!("{:.2}% MB", cpu_usage);
             }
             format!("{:.2} MB", memory_usage)
         })));

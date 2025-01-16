@@ -1,6 +1,6 @@
+use chrono::Local;
 use std::fs::File;
 use std::io::{self, Write};
-use chrono::Local;
 
 pub struct Logger {
     file: Option<File>,

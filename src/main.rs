@@ -1,21 +1,21 @@
-mod process_manager;
-mod data_collector;
 mod chart_manager;
+mod data_collector;
 mod logger;
+mod process_manager;
 
-use sysinfo::{Pid};
-use std::io::{self};
-use std::{thread, time::Duration};
-use std::process::{Child, Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::time::Instant;
-use clap::Parser;
-use ctrlc;
 use crate::chart_manager::ChartManager;
 use crate::data_collector::DataCollector;
 use crate::logger::Logger;
 use crate::process_manager::ProcessManager;
+use clap::Parser;
+use ctrlc;
+use std::io::{self};
+use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Instant;
+use std::{thread, time::Duration};
+use sysinfo::Pid;
 
 const RED: rgb::RGB8 = rgb::RGB8::new(0xFF, 0x00, 0x00);
 const GREEN: rgb::RGB8 = rgb::RGB8::new(0x00, 0xFF, 0x00);
@@ -40,17 +40,28 @@ fn format_duration(duration: Duration) -> String {
 }
 
 fn start_process(command: &str, workdir: &str) -> Result<Child, io::Error> {
-    let child = Command::new("sh")
-        .arg("-c")
-        .arg(command)
-        .current_dir(workdir) // Устанавливаем рабочую папку
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
+    let child = if cfg!(target_os = "windows") {
+        // Для Windows используем cmd.exe с параметром /c
+        Command::new("cmd.exe")
+            .arg("/c")
+            .arg(command)
+            .current_dir(workdir)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?
+    } else {
+        // Для Unix-подобных систем используем sh с параметром -c
+        Command::new("sh")
+            .arg("-c")
+            .arg(command)
+            .current_dir(workdir)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?
+    };
 
     Ok(child)
 }
-
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -91,11 +102,26 @@ struct Args {
     sleep: u64,
 }
 
-
-fn x_label_format(tick: usize, cpu_usage: f32, memory_usage: f32, total_written_bytes: f32, total_read_bytes: f32, name: String, status: String, disk_write: bool, disk_read: bool) -> String {
-    let mut label = format!("{} ORANGE = CPU (Usage: {:.2} %), GREEN/RED = Memory (Usage: {:.2} MB)", tick, cpu_usage, memory_usage);
+fn x_label_format(
+    tick: usize,
+    cpu_usage: f32,
+    memory_usage: f32,
+    total_written_bytes: f32,
+    total_read_bytes: f32,
+    name: String,
+    status: String,
+    disk_write: bool,
+    disk_read: bool,
+) -> String {
+    let mut label = format!(
+        "{} ORANGE = CPU (Usage: {:.2} %), GREEN/RED = Memory (Usage: {:.2} MB)",
+        tick, cpu_usage, memory_usage
+    );
     if disk_write {
-        label += &format!(", PURPLE - disk write (Usage: {:.2} MB)", total_written_bytes);
+        label += &format!(
+            ", PURPLE - disk write (Usage: {:.2} MB)",
+            total_written_bytes
+        );
     }
     if disk_read {
         label += &format!(", BLUE - disk read (Usage: {:.2} MB)", total_read_bytes);
@@ -115,7 +141,8 @@ fn main() -> Result<(), io::Error> {
     // Захват сигнала Ctrl+C
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
-    }).expect("Error setting Ctrl+C handler");
+    })
+    .expect("Error setting Ctrl+C handler");
 
     let process_manager = ProcessManager::new();
     let mut child = if !args.command.is_empty() {
@@ -185,34 +212,44 @@ fn main() -> Result<(), io::Error> {
         // Второе обновление для точного измерения CPU usage
         system.refresh_all();
 
-        if let Some((cpu_usage, memory_usage, total_written_bytes, total_read_bytes, name, status)) = data_collector.get_process_data(&system, pid) {
-            if memory_usage_min == 0. && memory_usage > 0. {
-                memory_usage_min = memory_usage;
+        if let Some(process_data) = data_collector.get_process_data(&system, pid) {
+            if memory_usage_min == 0. && process_data.memory_usage > 0. {
+                memory_usage_min = process_data.memory_usage;
             }
-            if memory_usage > memory_usage_min * 2. {
+            if process_data.memory_usage > memory_usage_min * 2. {
                 memory_color = RED;
-            } else if memory_usage <= memory_usage_min * 2. {
+            } else if process_data.memory_usage <= memory_usage_min * 2. {
                 memory_color = GREEN;
             }
 
-            if memory_usage > max {
-                max = memory_usage;
+            if process_data.memory_usage > max {
+                max = process_data.memory_usage;
             }
 
             // Обновление максимальных значений CPU и памяти
-            if cpu_usage > max_cpu_usage {
-                max_cpu_usage = cpu_usage;
+            if process_data.cpu_usage > max_cpu_usage {
+                max_cpu_usage = process_data.cpu_usage;
             }
-            if memory_usage > max_memory_usage {
-                max_memory_usage = memory_usage;
+            if process_data.memory_usage > max_memory_usage {
+                max_memory_usage = process_data.memory_usage;
             }
 
-            let x_label = x_label_format(tick, cpu_usage, memory_usage, total_written_bytes, total_read_bytes, name.clone(), status.clone(), args.disk_write, args.disk_read);
+            let x_label = x_label_format(
+                tick,
+                process_data.cpu_usage,
+                process_data.memory_usage,
+                process_data.total_written_bytes,
+                process_data.total_read_bytes,
+                process_data.name.clone(),
+                process_data.status.clone(),
+                args.disk_write,
+                args.disk_read,
+            );
 
-            data_collector.update_cpu_data(cpu_usage);
-            data_collector.update_memory_data(memory_usage);
-            data_collector.update_disk_read_data(total_read_bytes);
-            data_collector.update_disk_write_data(total_written_bytes);
+            data_collector.update_cpu_data(process_data.cpu_usage);
+            data_collector.update_memory_data(process_data.memory_usage);
+            data_collector.update_disk_read_data(process_data.total_read_bytes);
+            data_collector.update_disk_write_data(process_data.total_written_bytes);
 
             if !args.nochart {
                 logger.log(&x_label)?;
@@ -225,15 +262,14 @@ fn main() -> Result<(), io::Error> {
                     .set_disk_read_data(&data_collector.disk_write_data)
                     .set_disk_write_data(&data_collector.disk_read_data)
                     .set_x_label(x_label)
-                    .set_cpu_usage(cpu_usage)
-                    .set_memory_usage(memory_usage)
+                    .set_cpu_usage(process_data.cpu_usage)
+                    .set_memory_usage(process_data.memory_usage)
                     .set_memory_color(memory_color)
                     .set_disk_write(args.disk_write)
                     .set_disk_read(args.disk_read)
                     .set_max(max)
                     .draw_chart();
             }
-
 
             tick += 1;
         } else {
@@ -242,7 +278,9 @@ fn main() -> Result<(), io::Error> {
             }
             let term = console::Term::stdout();
             term.show_cursor().unwrap();
-            let new_pid = system.processes().iter()
+            let new_pid = system
+                .processes()
+                .iter()
                 .find(|(_, p)| p.pid() == pid)
                 .map(|(&pid, _)| pid.as_u32());
 
@@ -266,36 +304,44 @@ fn main() -> Result<(), io::Error> {
 
     // Вывод статистики
     let elapsed_time = start_time.elapsed();
-    let min_memory_usage = data_collector.memory_data
+    let min_memory_usage = data_collector
+        .memory_data
         .iter()
         .map(|&(_, value)| value) // Извлекаем второе значение из кортежа
         .fold(f32::INFINITY, f32::min); // Находим минимальное значение
-    // Среднее использование CPU
-    let avg_cpu_usage = data_collector.cpu_data
+                                        // Среднее использование CPU
+    let avg_cpu_usage = data_collector
+        .cpu_data
         .iter()
         .map(|&(_, value)| value) // Извлекаем второе значение из кортежа
-        .sum::<f32>() / data_collector.cpu_data.len() as f32;
+        .sum::<f32>()
+        / data_collector.cpu_data.len() as f32;
 
     // Среднее использование памяти
-    let avg_memory_usage = data_collector.memory_data
+    let avg_memory_usage = data_collector
+        .memory_data
         .iter()
         .map(|&(_, value)| value) // Извлекаем второе значение из кортежа
-        .sum::<f32>() / data_collector.memory_data.len() as f32;
+        .sum::<f32>()
+        / data_collector.memory_data.len() as f32;
 
     // Общее количество записанных данных на диск
-    let total_disk_write = data_collector.disk_write_data
+    let total_disk_write = data_collector
+        .disk_write_data
         .iter()
         .map(|&(_, value)| value) // Извлекаем второе значение из кортежа
         .sum::<f32>();
 
     // Общее количество прочитанных данных на диск
-    let total_disk_read = data_collector.disk_read_data
+    let total_disk_read = data_collector
+        .disk_read_data
         .iter()
         .map(|&(_, value)| value) // Извлекаем второе значение из кортежа
         .sum::<f32>();
 
     // Минимальное использование CPU
-    let min_cpu_usage = data_collector.cpu_data
+    let min_cpu_usage = data_collector
+        .cpu_data
         .iter()
         .map(|&(_, value)| value) // Извлекаем второе значение из кортежа
         .fold(f32::INFINITY, f32::min); // Находим минимальное значение

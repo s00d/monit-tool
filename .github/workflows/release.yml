@@ -50,7 +50,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: binaries
+          name: binaries-${{ matrix.target }} # Уникальное имя артефакта для каждой платформы
           path: release/
 
   create-release:
@@ -64,7 +64,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: binaries
+          name: binaries-${{ matrix.target }} # Уникальное имя артефакта для каждой платформы
           path: release/
 
       - name: Create Release

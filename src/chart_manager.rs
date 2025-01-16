@@ -139,7 +139,7 @@ impl ChartManager {
         let memory_usage = self.memory_usage.clone();
         dots = dots.y_label_format(LabelFormat::Custom(Box::new(move |val| {
             if val == 0. {
-                return format!("{:.2}% MB", cpu_usage);
+                return format!("{:.2}%", cpu_usage);
             }
             format!("{:.2} MB", memory_usage)
         })));
